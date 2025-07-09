@@ -25,11 +25,14 @@ fn compiler_flags() -> Vec<&'static str> {
 
     if cfg!(target_env = "msvc") {
         flags.push("/EHsc");
+        flags.push("/O2");
 
         // Find Ninja
         if which::which("ninja").is_ok() {
             env::set_var("CMAKE_GENERATOR", "Ninja");
         }
+    } else {
+        flags.push("-O3");
     }
 
     flags
