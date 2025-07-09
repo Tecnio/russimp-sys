@@ -29,7 +29,9 @@ fn compiler_flags() -> Vec<&'static str> {
 
         // Find Ninja
         if which::which("ninja").is_ok() {
-            env::set_var("CMAKE_GENERATOR", "Ninja");
+            unsafe {
+                env::set_var("CMAKE_GENERATOR", "Ninja");
+            }
         }
     } else {
         flags.push("-O3");
@@ -166,7 +168,6 @@ fn link_from_package() {
 
 fn main() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
 
     // Look for assimp lib in Brew install paths on MacOS.
     // See https://stackoverflow.com/questions/70497361/homebrew-mac-m1-cant-find-installs
@@ -198,7 +199,7 @@ fn main() {
         .header("wrapper.h")
         .clang_arg(format!("-I{}", out_dir.join(static_lib()).join("include").display()))
         .clang_arg(format!("-I{}", "assimp/include"))
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::default()))
         .allowlist_type("ai.*")
         .allowlist_function("ai.*")
         .allowlist_var("ai.*")
@@ -217,15 +218,7 @@ fn main() {
         let _ = fs::remove_file(config_file);
     }
 
-    let mut built_opts = built::Options::default();
-    built_opts
-        .set_dependencies(false)
-        .set_compiler(false)
-        .set_ci(false)
-        .set_cfg(false);
-
-    built::write_built_file_with_opts(&built_opts, &manifest_dir, &out_dir.join("built.rs"))
-        .unwrap();
+    built::write_built_file().expect("Failed to acquire build-time information, for details see");
 
     for n in lib_names().iter() {
         println!("cargo:rustc-link-lib={}={}", n.1, n.0);
